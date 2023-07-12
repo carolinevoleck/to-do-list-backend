@@ -3,7 +3,7 @@ import cors from 'cors'
 import { db } from './database/knex'
 import { strict } from 'assert'
 import { error } from 'console'
-import { TUserDB } from './types'
+import { TTaskDB, TUserDB } from './types'
 
 const app = express()
 
@@ -178,6 +178,79 @@ app.get("/tasks", async (req: Request, res: Response) => {
 
             res.status(200).send(result)
         }
+
+    }   catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
+app.post("/tasks", async (req: Request, res: Response) => {
+    try {
+        
+        const {id, title, description} = req.body
+
+        if (typeof id !== "string"){
+            res.status(400)
+            throw new Error("'id' deve ser string")
+
+        }
+
+        if(id.length < 4){
+            res.status(400)
+            throw new Error("'id' deve possuir pelo menos 4 caracteres")
+
+        }
+
+        if (typeof title !== "string"){
+            res.status(400)
+            throw new Error("'title' deve ser string")
+
+        }
+
+        if(title.length < 4){
+            res.status(400)
+            throw new Error("'title' deve possuir pelo menos 4 caracteres")
+
+        }
+
+        if (typeof description !== "string"){
+            res.status(400)
+            throw new Error("'description' deve ser string")
+
+        }
+
+       
+        const [ taskIdreadyExixts ]: TTaskDB[] | undefined = await db("tasks").where({ id })
+
+        if(taskIdreadyExixts){
+            res.status(400)
+            throw new Error("'id' ja existe")
+        }
+
+        const newTask = {
+            id,
+            title,
+            description
+        }
+
+        await db("tasks").insert(newTask)
+
+        const [ insertedTask ]: TTaskDB[] = await db("tasks").where({ id })
+
+        res.status(201).send({ 
+            message: "Task criado com sucesso",
+            task: insertedTask
+        })
 
     }   catch (error) {
         console.log(error)
